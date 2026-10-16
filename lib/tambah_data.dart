@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'home.dart';
 
 class TambahData extends StatefulWidget {
   @override
@@ -12,22 +11,31 @@ class _TambahDataState extends State<TambahData> {
   TextEditingController namaController = TextEditingController();
   TextEditingController prodiController = TextEditingController();
 
-  void tambahData() {
-    DocumentReference documentReference = FirebaseFirestore.instance
-        .collection('mahasiswa')
-        .doc(nimController.text);
+  Future<void> tambahData() async {
+    final nim = nimController.text.trim();
+    final nama = namaController.text.trim();
+    final prodi = prodiController.text.trim();
 
-    // Create a map to hold the data to be added in Key:Value format
-    Map<String, dynamic> dataMHS = ({
-      'nim': nimController.text,
-      'nama': namaController.text,
-      'prodi': prodiController.text,
-    });
+    if (nim.isEmpty || nama.isEmpty || prodi.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Semua field wajib diisi.')),
+      );
+      return;
+    }
 
-    // Set data to Firestore (Firebase Cloud Firestore)
-    documentReference.set(dataMHS).whenComplete(() {
-      print('$nimController.text Data berhasil ditambahkan');
+    await FirebaseFirestore.instance.collection('mahasiswa').doc(nim).set({
+      'nim': nim,
+      'nama': nama,
+      'prodi': prodi,
     });
+  }
+
+  @override
+  void dispose() {
+    nimController.dispose();
+    namaController.dispose();
+    prodiController.dispose();
+    super.dispose();
   }
 
   @override
@@ -79,13 +87,21 @@ class _TambahDataState extends State<TambahData> {
             ),
             SizedBox(height: 60),
             ElevatedButton(
-              onPressed: () {
-                tambahData();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => Home()),
-                  (Route<dynamic> route) => false,
-                );
+              onPressed: () async {
+                try {
+                  await tambahData();
+                  if (!mounted) return;
+                  if (nimController.text.trim().isNotEmpty &&
+                      namaController.text.trim().isNotEmpty &&
+                      prodiController.text.trim().isNotEmpty) {
+                    Navigator.pop(context);
+                  }
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal menyimpan data: $e')),
+                  );
+                }
               },
               child: Text('Simpan'),
             ),

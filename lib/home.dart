@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'tambah_data.dart';
+import 'edit_data.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -39,6 +40,18 @@ class HomeState extends State<Home> {
                     return Column(
                       children: [
                         GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => EditData(
+                                  nim: documentSnapshot["nim"].toString(),
+                                  nama: documentSnapshot["nama"].toString(),
+                                  prodi: documentSnapshot["prodi"].toString(),
+                                ),
+                              ),
+                            );
+                          },
                           child: ListTile(
                             leading: Icon(Icons.person),
                             title: Text(documentSnapshot["nim"]),

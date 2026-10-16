@@ -28,33 +28,29 @@ class _EditDataState extends State<EditData> {
   }
 
   // Function to update data in Firestore
-  void editData() {
+  Future<void> editData() async {
     DocumentReference documentReference = FirebaseFirestore.instance
         .collection('mahasiswa')
         .doc(widget.nim);
 
-    Map<String, dynamic> dataMHS = ({
-      'nim': nimController.text,
-      'nama': namaController.text,
-      'prodi': prodiController.text,
-    });
+    final dataMHS = <String, dynamic>{
+      // Keep the original NIM as the Firestore document ID.
+      'nim': widget.nim,
+      'nama': namaController.text.trim(),
+      'prodi': prodiController.text.trim(),
+    };
 
-    // Update data in Firestore using the document reference and the new data
-    documentReference
-        .update(dataMHS)
-        .whenComplete(() => print('${widget.nim} Data berhasil diupdate'));
+    await documentReference.update(dataMHS);
   }
 
   // Function to delete data from Firestore
-  void deleteData() {
+  Future<void> deleteData() async {
     DocumentReference documentReference = FirebaseFirestore.instance
         .collection('mahasiswa')
         .doc(widget.nim);
 
     // Delete the document from Firestore using the document reference
-    documentReference.delete().whenComplete(
-      () => print('${widget.nim} Data berhasil dihapus'),
-    );
+    await documentReference.delete();
   }
 
   // Function to show a confirmation dialog before deleting data
@@ -65,13 +61,18 @@ class _EditDataState extends State<EditData> {
         ElevatedButton(
           style: ElevatedButton.styleFrom(foregroundColor: Colors.red),
           child: Text("OK DELETE!", style: TextStyle(color: Colors.black)),
-          onPressed: () {
-            deleteData();
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => Home()),
-              (Route<dynamic> route) => false,
-            );
+          onPressed: () async {
+            try {
+              await deleteData();
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            } catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Gagal menghapus data: $e')),
+              );
+            }
           },
         ),
         ElevatedButton(
@@ -87,6 +88,14 @@ class _EditDataState extends State<EditData> {
         return alertDialog;
       },
     );
+  }
+
+  @override
+  void dispose() {
+    nimController.dispose();
+    namaController.dispose();
+    prodiController.dispose();
+    super.dispose();
   }
 
   @override
@@ -109,6 +118,7 @@ class _EditDataState extends State<EditData> {
             SizedBox(height: 20),
             TextFormField(
               controller: nimController,
+              readOnly: true,
               decoration: InputDecoration(
                 labelText: 'NIM',
                 border: OutlineInputBorder(
@@ -141,13 +151,26 @@ class _EditDataState extends State<EditData> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 ElevatedButton(
-                  onPressed: () {
-                    editData();
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => Home()),
-                      (Route<dynamic> route) => false,
-                    );
+                  onPressed: () async {
+                    if (namaController.text.trim().isEmpty ||
+                        prodiController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Nama dan program studi wajib diisi.'),
+                        ),
+                      );
+                      return;
+                    }
+                    try {
+                      await editData();
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Gagal mengubah data: $e')),
+                      );
+                    }
                   },
                   child: Text("UPDATE"),
                 ),
